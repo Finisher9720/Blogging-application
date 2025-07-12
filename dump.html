@@ -1,0 +1,299 @@
+
+<!-- =============================
+     index.js
+     ============================= -->
+<div>
+<pre><code>
+// --------------------------
+// Required Modules Import
+// --------------------------
+const express = require("express");
+const path = require("path");
+const userRoute = require("./routes/user");
+const mongoose = require("mongoose");
+
+// Database & Middleware Imports
+// const { connecttomongodb } = require("./connection");
+// const URL = require("./models/url");
+
+// Route Imports
+//const userRoute = require("./routes/user");
+// --------------------------
+// Express App Initialization
+// --------------------------
+const app = express();
+const PORT = process.env.PORT || 3000;
+// --------------------------
+// Middleware Setup
+// --------------------------
+app.use(express.json()); // Parse JSON bodies
+app.use(express.urlencoded({ extended: false })); // Parse URL-encoded bodies
+
+// --------------------------
+// Database Connection
+// --------------------------
+//connecttomongodb("mongodb://localhost:27017/myshorturl");
+// --------------------------
+// View Engine Configuration (EJS)
+// --------------------------
+app.set("view engine", "ejs");
+app.set("views", path.resolve("./views")); // Set views directory
+// --------------------------
+// Route Handlers
+// --------------------------
+// Protected Routes (require auth)
+
+// Public Routes (check auth but allow access)
+app.get("/", (req, res) =&gt; {
+  res.render("home");
+});
+
+
+
+app.use("/user", userRoute);
+
+// --------------------------
+// Server Startup
+// --------------------------
+app.listen(PORT, () =&gt; {
+  console.log(`Server is running at http://localhost:3000`);
+});
+
+</code></pre>
+</div>
+
+<!-- =============================
+     models\user.js
+     ============================= -->
+<div>
+<pre><code>
+const { randomBytes, createmac } = require("crypto");
+
+const mongoose = require("mongoose");
+
+mongoose
+  .connect("mongodb://localhost:27017/blogify")
+  .then(() =&gt; console.log("MongoDB Connected"))
+  .catch((err) =&gt; console.error("Connection error:", err));
+
+const userSchema = new mongoose.Schema(
+  {
+    fullName: { type: String, required: true },
+    email: { type: String, required: true },
+    salt: { type: String },
+    password: { type: String, required: true },
+    profileImageURL: { type: String, default: "/public/images/default.png" },
+    role: { type: String, enum: ["USER", "ADMIN"], default: "USER" },
+  },
+  { timestamps: true }
+);
+
+userSchema.pre("save", function (next) {
+  const user = this;
+  if (!user.isModified("password")) {
+  return next();
+}
+
+  const salt = randomBytes(16).toString();
+  const hashedPassword = createmac("sha256", salt)
+    .update(user.password)
+    .digest("hex");
+
+  this.salt = salt;
+  this.password = hashedPassword;
+  next();
+});
+
+const User = mongoose.model("user", userSchema);
+
+module.exports = User;
+
+</code></pre>
+</div>
+
+<!-- =============================
+     routes\user.js
+     ============================= -->
+<div>
+<pre><code>
+const User = require("../models/user");
+const express = require("express");
+const router = express.Router();
+
+router.get("/signin", (req, res) =&gt; {
+  return res.render("signin");
+});
+router.get("/signup", (req, res) =&gt; {
+  return res.render("signup");
+});
+
+router.post("/signup", async (req, res) =&gt; {
+  const { fullName, email, password } = req.body;
+  await User.create({
+    fullName,
+    email,
+    password,
+  });
+  return res.redirect("/");
+});
+
+module.exports = router;
+
+</code></pre>
+</div>
+
+<!-- =============================
+     views\home.ejs
+     ============================= -->
+<div>
+<pre><code>
+&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+    &lt;%- include('./partials/head') %&gt;
+    &lt;link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous"&gt;
+    &lt;meta charset="UTF-8"&gt;
+    &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+    &lt;title&gt;Homepage
+    &lt;/title&gt;
+    
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;%- include('./partials/nav') %&gt;
+   
+     
+    
+    &lt;%- include('./partials/script') %&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+</div>
+
+<!-- =============================
+     views\partials\head.ejs
+     ============================= -->
+<div>
+<pre><code>
+&lt;link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous"&gt;
+    &lt;meta charset="UTF-8"&gt;
+    &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+</code></pre>
+</div>
+
+<!-- =============================
+     views\partials\nav.ejs
+     ============================= -->
+<div>
+<pre><code>
+&lt;nav class="navbar navbar-expand-lg bg-body-tertiary bg-dark"data-bs-theme="dark"&gt;
+  &lt;div class="container-fluid"&gt;
+    &lt;a class="navbar-brand" href="#"&gt;Blogify&lt;/a&gt;
+    &lt;button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation"&gt;
+      &lt;span class="navbar-toggler-icon"&gt;&lt;/span&gt;
+    &lt;/button&gt;
+    &lt;div class="collapse navbar-collapse" id="navbarNavDropdown"&gt;
+      &lt;ul class="navbar-nav"&gt;
+        &lt;li class="nav-item"&gt;
+          &lt;a class="nav-link active" aria-current="page" href="#"&gt;Home&lt;/a&gt;
+        &lt;/li&gt;
+        &lt;li class="nav-item"&gt;
+          &lt;a class="nav-link" href="#"&gt;Add Blog&lt;/a&gt;
+        &lt;/li&gt;
+        &lt;li class="nav-item"&gt;
+          &lt;a class="nav-link" href="#"&gt;Pricing&lt;/a&gt;
+        &lt;/li&gt;
+        &lt;li class="nav-item dropdown"&gt;
+          &lt;a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"&gt;
+            Sakshma
+          &lt;/a&gt;
+          &lt;ul class="dropdown-menu"&gt;
+            &lt;li&gt;&lt;a class="dropdown-item" href="#"&gt;logout&lt;/a&gt;&lt;/li&gt;
+            
+          &lt;/ul&gt;
+        &lt;/li&gt;
+      &lt;/ul&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/nav&gt;
+</code></pre>
+</div>
+
+<!-- =============================
+     views\partials\script.ejs
+     ============================= -->
+<div>
+<pre><code>
+&lt;script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"&gt;&lt;/script&gt;
+</code></pre>
+</div>
+
+<!-- =============================
+     views\signup.ejs
+     ============================= -->
+<div>
+<pre><code>
+&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+  &lt;head&gt;
+    &lt;%- include('./partials/head') %&gt;
+    &lt;link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr"
+      crossorigin="anonymous"
+    /&gt;
+    &lt;meta charset="UTF-8" /&gt;
+    &lt;meta name="viewport" content="width=device-width, initial-scale=1.0" /&gt;
+    &lt;title&gt;Signup&lt;/title&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;%- include('./partials/nav') %&gt;
+
+    &lt;div class="container mt-4"&gt;
+      &lt;form action="/user/signup"  method="post"&gt;
+        &lt;div class="mb-3"&gt;
+          &lt;label for="exampleInputEmail1" class="form-label"&gt;Full Name&lt;/label&gt;
+          &lt;input
+            name="fullName"
+            id="fullName"
+            type="text"
+            class="form-control"
+            id="exampleInputEmail1"
+            aria-describedby="emailHelp"
+          /&gt;
+        &lt;/div&gt;
+        &lt;div class="mb-3"&gt;
+          &lt;label for="exampleInputEmail1" class="form-label"
+            &gt;Email address&lt;/label
+          &gt;
+          &lt;input
+            type="email"
+            name="email"
+            class="form-control"
+            id="email"
+            aria-describedby="emailHelp"
+          /&gt;
+          &lt;div id="emailHelp" class="form-text"&gt;
+            We'll never share your email with anyone else.
+          &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="mb-3"&gt;
+          &lt;label for="exampleInputPassword1" class="form-label"&gt;Password&lt;/label&gt;
+          &lt;input
+            name="password"
+            type="password"
+            class="form-control"
+            id="exampleInputPassword1"
+          /&gt;
+        &lt;/div&gt;
+
+        &lt;button type="submit" class="btn btn-primary"&gt;Submit&lt;/button&gt;
+      &lt;/form&gt;
+    &lt;/div&gt;
+
+    &lt;%- include('./partials/script') %&gt;
+  &lt;/body&gt;
+&lt;/html&gt;
+
+</code></pre>
+</div>
