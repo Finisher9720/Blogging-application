@@ -22,8 +22,8 @@ const userSchema = new mongoose.Schema(
 userSchema.pre("save", function (next) {
   const user = this;
   if (!user.isModified("password")) {
-  return next();
-}
+    return;
+  }
 
   const salt = randomBytes(16).toString();
   const hashedPassword = createHmac("sha256", salt)
@@ -34,6 +34,37 @@ userSchema.pre("save", function (next) {
   this.password = hashedPassword;
   next();
 });
+
+// Define a static method on the user schema to check login credentials
+userSchema.static("matchpassword", async function (email, password) {
+
+  // Search for a user by their email in the database
+  const user = await this.findOne({ email });
+
+  // If user with the given email is not found, throw an error
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  // Extract the stored salt and hashed password from the found user
+  const salt = user.salt;
+  const hashedPassword = user.password;
+
+  // Hash the password entered by the user using the same salt and hashing algorithm
+  const userprovidedhashed = createHmac("sha256", salt)
+    .update(password)
+    .digest("hex");
+
+  // Compare the stored hashed password with the one generated from the entered password
+  if (hashedPassword !== userprovidedhashed) {
+    throw new Error("incorrect password");
+  }
+
+  // If password matches, return the user object
+  // But remove `password` and `salt` for security reasons before returning
+  return { user };
+});
+
 
 const User = mongoose.model("user", userSchema);
 

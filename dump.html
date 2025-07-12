@@ -67,7 +67,7 @@ app.listen(PORT, () =&gt; {
      ============================= -->
 <div>
 <pre><code>
-const { randomBytes, createmac } = require("crypto");
+const { randomBytes, createHmac } = require("crypto");
 
 const mongoose = require("mongoose");
 
@@ -91,17 +91,37 @@ const userSchema = new mongoose.Schema(
 userSchema.pre("save", function (next) {
   const user = this;
   if (!user.isModified("password")) {
-  return next();
-}
+    return;
+  }
 
   const salt = randomBytes(16).toString();
-  const hashedPassword = createmac("sha256", salt)
+  const hashedPassword = createHmac("sha256", salt)
     .update(user.password)
     .digest("hex");
 
   this.salt = salt;
   this.password = hashedPassword;
   next();
+});
+
+userSchema.static("matchpassword", function (email, password) {
+  const user = this.findOne({ email })
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+  const salt = user.salt;
+  const hashedPassword = user.password;
+
+  const userprovidedhashed = createHmac("sha256", salt)
+    .update(password)
+    .digest("hex");
+
+  if (hashedPassword !== userprovidedhashed) {
+    throw new Error("incorrect password");
+  }
+
+  return { ...user, password: undefined, salt: undefined };
 });
 
 const User = mongoose.model("user", userSchema);
@@ -123,6 +143,14 @@ const router = express.Router();
 router.get("/signin", (req, res) =&gt; {
   return res.render("signin");
 });
+
+router.post("/signin", async(req, res) =&gt; {
+  const { email, password } = req.body;
+  const user =await User.matchpassword(email, password);
+  console.log(user);
+  return res.redirect('/')
+});
+
 router.get("/signup", (req, res) =&gt; {
   return res.render("signup");
 });
@@ -224,6 +252,67 @@ module.exports = router;
 <div>
 <pre><code>
 &lt;script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"&gt;&lt;/script&gt;
+</code></pre>
+</div>
+
+<!-- =============================
+     views\signin.ejs
+     ============================= -->
+<div>
+<pre><code>
+&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+  &lt;head&gt;
+    &lt;%- include('./partials/head') %&gt;
+    &lt;link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr"
+      crossorigin="anonymous"
+    /&gt;
+    &lt;meta charset="UTF-8" /&gt;
+    &lt;meta name="viewport" content="width=device-width, initial-scale=1.0" /&gt;
+    &lt;title&gt;Signup&lt;/title&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;%- include('./partials/nav') %&gt;
+
+    &lt;div class="container mt-4"&gt;
+      &lt;form action="/user/signin"  method="post"&gt;
+        
+        &lt;div class="mb-3"&gt;
+          &lt;label for="exampleInputEmail1" class="form-label"
+            &gt;Email address&lt;/label
+          &gt;
+          &lt;input
+            type="email"
+            name="email"
+            class="form-control"
+            id="email"
+            aria-describedby="emailHelp"
+          /&gt;
+          &lt;div id="emailHelp" class="form-text"&gt;
+            We'll never share your email with anyone else.
+          &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="mb-3"&gt;
+          &lt;label for="exampleInputPassword1" class="form-label"&gt;Password&lt;/label&gt;
+          &lt;input
+            name="password"
+            type="password"
+            class="form-control"
+            id="exampleInputPassword1"
+          /&gt;
+        &lt;/div&gt;
+
+        &lt;button type="submit" class="btn btn-primary"&gt;Submit&lt;/button&gt;
+      &lt;/form&gt;
+    &lt;/div&gt;
+
+    &lt;%- include('./partials/script') %&gt;
+  &lt;/body&gt;
+&lt;/html&gt;
+
 </code></pre>
 </div>
 

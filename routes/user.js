@@ -6,8 +6,11 @@ router.get("/signin", (req, res) => {
   return res.render("signin");
 });
 
-router.get("/signin", (req, res) => {
-  
+router.post("/signin", async(req, res) => {
+  const { email, password } = req.body;
+  const user =await User.matchpassword(email, password);
+  console.log(user);
+  return res.redirect('/')
 });
 
 router.get("/signup", (req, res) => {
