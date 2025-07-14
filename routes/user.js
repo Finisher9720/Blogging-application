@@ -14,7 +14,7 @@ router.post("/signin", async (req, res) => {
     console.log({ token: token });
     return res.cookie("token", token).redirect("/");
   } catch (error) {
-    return res.render('login', {error:'incorrect email or password '})
+    return res.render('signin', {error:'incorrect email or password '})
   }
 });
 
