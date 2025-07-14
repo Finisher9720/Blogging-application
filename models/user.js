@@ -1,6 +1,7 @@
 const { randomBytes, createHmac } = require("crypto");
 
 const mongoose = require("mongoose");
+const { createtokenforuser } = require("../service/authentication");
 
 mongoose
   .connect("mongodb://localhost:27017/blogify")
@@ -36,35 +37,35 @@ userSchema.pre("save", function (next) {
 });
 
 // Define a static method on the user schema to check login credentials
-userSchema.static("matchpassword", async function (email, password) {
+userSchema.static(
+  "matchpasswordandgeneratetoken",
+  async function (email, password) {
+    // Search for a user by their email in the database
+    const user = await this.findOne({ email });
 
-  // Search for a user by their email in the database
-  const user = await this.findOne({ email });
+    // If user with the given email is not found, throw an error
+    if (!user) {
+      throw new Error("User not found");
+    }
 
-  // If user with the given email is not found, throw an error
-  if (!user) {
-    throw new Error("User not found");
+    // Extract the stored salt and hashed password from the found user
+    const salt = user.salt;
+    const hashedPassword = user.password;
+
+    // Hash the password entered by the user using the same salt and hashing algorithm
+    const userprovidedhashed = createHmac("sha256", salt)
+      .update(password)
+      .digest("hex");
+
+    // Compare the stored hashed password with the one generated from the entered password
+    if (hashedPassword !== userprovidedhashed) {
+      throw new Error("incorrect password");
+    }
+
+    const token = createtokenforuser(user);
+    return token;
   }
-
-  // Extract the stored salt and hashed password from the found user
-  const salt = user.salt;
-  const hashedPassword = user.password;
-
-  // Hash the password entered by the user using the same salt and hashing algorithm
-  const userprovidedhashed = createHmac("sha256", salt)
-    .update(password)
-    .digest("hex");
-
-  // Compare the stored hashed password with the one generated from the entered password
-  if (hashedPassword !== userprovidedhashed) {
-    throw new Error("incorrect password");
-  }
-
-  // If password matches, return the user object
-  // But remove `password` and `salt` for security reasons before returning
-  return { user };
-});
-
+);
 
 const User = mongoose.model("user", userSchema);
 

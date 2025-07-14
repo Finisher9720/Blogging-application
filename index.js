@@ -42,8 +42,6 @@ app.get("/", (req, res) => {
   res.render("home");
 });
 
-
-
 app.use("/user", userRoute);
 
 // --------------------------

@@ -2,17 +2,23 @@ const User = require("../models/user");
 const express = require("express");
 const router = express.Router();
 
+// signup page
 router.get("/signin", (req, res) => {
   return res.render("signin");
 });
 
-router.post("/signin", async(req, res) => {
+router.post("/signin", async (req, res) => {
   const { email, password } = req.body;
-  const user =await User.matchpassword(email, password);
-  console.log(user);
-  return res.redirect('/')
+  try {
+    const token = await User.matchpasswordandgeneratetoken(email, password);
+    console.log({ token: token });
+    return res.cookie("token", token).redirect("/");
+  } catch (error) {
+    return res.render('login', {error:'incorrect email or password '})
+  }
 });
 
+// signup or login page
 router.get("/signup", (req, res) => {
   return res.render("signup");
 });
