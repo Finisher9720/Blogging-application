@@ -3,15 +3,18 @@
 // --------------------------
 const express = require("express");
 const path = require("path");
-const userRoute = require("./routes/user");
 const mongoose = require("mongoose");
+const cookieparser = require("cookie-parser");
+
+// function import
+const { checkforauthenticationcookie } = require("./middleware/authentication");
 
 // Database & Middleware Imports
 // const { connecttomongodb } = require("./connection");
 // const URL = require("./models/url");
 
 // Route Imports
-//const userRoute = require("./routes/user");
+const userRoute = require("./routes/user");
 // --------------------------
 // Express App Initialization
 // --------------------------
@@ -22,6 +25,9 @@ const PORT = process.env.PORT || 3000;
 // --------------------------
 app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: false })); // Parse URL-encoded bodies
+app.use(cookieparser());
+app.use(checkforauthenticationcookie("token"));
+
 
 // --------------------------
 // Database Connection
@@ -39,7 +45,7 @@ app.set("views", path.resolve("./views")); // Set views directory
 
 // Public Routes (check auth but allow access)
 app.get("/", (req, res) => {
-  res.render("home");
+  res.render("home", { user: req.user });
 });
 
 app.use("/user", userRoute);
