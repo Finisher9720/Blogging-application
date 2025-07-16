@@ -15,6 +15,7 @@ const { checkforauthenticationcookie } = require("./middleware/authentication");
 
 // Route Imports
 const userRoute = require("./routes/user");
+const blogRoute = require("./routes/blog");
 // --------------------------
 // Express App Initialization
 // --------------------------
@@ -49,6 +50,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/user", userRoute);
+app.use("/blog", blogRoute);
 
 // --------------------------
 // Server Startup
