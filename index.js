@@ -8,6 +8,7 @@ const cookieparser = require("cookie-parser");
 
 // function import
 const { checkforauthenticationcookie } = require("./middleware/authentication");
+const blog = require("./models/blog");
 
 // Database & Middleware Imports
 // const { connecttomongodb } = require("./connection");
@@ -28,7 +29,7 @@ app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: false })); // Parse URL-encoded bodies
 app.use(cookieparser());
 app.use(checkforauthenticationcookie("token"));
-
+app.use(express.static("public"));
 
 // --------------------------
 // Database Connection
@@ -45,8 +46,9 @@ app.set("views", path.resolve("./views")); // Set views directory
 // Protected Routes (require auth)
 
 // Public Routes (check auth but allow access)
-app.get("/", (req, res) => {
-  res.render("home", { user: req.user });
+app.get("/", async (req, res) => {
+  const allblogs = await blog.find({});
+  res.render("home", { user: req.user, blogs: allblogs });
 });
 
 app.use("/user", userRoute);
